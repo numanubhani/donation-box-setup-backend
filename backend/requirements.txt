@@ -1,0 +1,8 @@
+Django>=6.0
+djangorestframework>=3.17
+djangorestframework-simplejwt>=5.5
+django-cors-headers>=4.0
+drf-yasg>=1.21
+channels>=4.0
+daphne>=4.0
+twilio>=9.0
