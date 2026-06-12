@@ -469,6 +469,56 @@ def collections_list(request):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 
+@api_view(['GET', 'PATCH', 'PUT'])
+@permission_classes([IsAuthenticatedUser])
+def collection_detail(request, pk):
+    try:
+        collection = Collection.objects.get(pk=pk)
+    except Collection.DoesNotExist:
+        return Response({'error': 'Collection not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = CollectionSerializer(collection)
+        return Response(serializer.data)
+
+    if not hasattr(request.user, 'profile') or request.user.profile.role != 'admin':
+        return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+
+    if 'boxId' in request.data:
+        box_id = request.data.get('boxId')
+        try:
+            collection.box = Box.objects.get(pk=box_id)
+        except Box.DoesNotExist:
+            return Response({'error': 'Box not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if 'collectorId' in request.data:
+        collector_id = request.data.get('collectorId')
+        try:
+            collection.collector = User.objects.get(pk=collector_id)
+        except User.DoesNotExist:
+            return Response({'error': 'Collector not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if 'amount' in request.data:
+        collection.amount = request.data.get('amount')
+
+    if 'notes' in request.data:
+        collection.notes = request.data.get('notes')
+
+    if 'collectionDate' in request.data:
+        collection.collection_date = request.data.get('collectionDate')
+
+    collection.save()
+
+    collector_name = f"{collection.collector.first_name} {collection.collector.last_name}".strip() or collection.collector.username
+    Activity.objects.filter(related_id=str(collection.id), type='collection').update(
+        description=f'{collector_name} collected PKR {int(collection.amount):,} from {collection.box.name}'
+    )
+
+    serializer = CollectionSerializer(collection)
+    _notify_sync()
+    return Response(serializer.data)
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticatedUser])
 def expenses_list(request):

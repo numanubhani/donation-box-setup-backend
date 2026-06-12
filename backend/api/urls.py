@@ -14,6 +14,7 @@ urlpatterns = [
     path('assignments/', views.assignments_list, name='assignments-list'),
     path('assignments/<int:pk>/', views.assignment_detail, name='assignment-detail'),
     path('collections/', views.collections_list, name='collections-list'),
+    path('collections/<int:pk>/', views.collection_detail, name='collection-detail'),
     path('expenses/', views.expenses_list, name='expenses-list'),
     path('complaints/', views.complaints_list, name='complaints-list'),
     path('complaints/<int:pk>/', views.complaint_detail, name='complaint-detail'),
