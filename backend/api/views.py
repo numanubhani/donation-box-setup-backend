@@ -313,8 +313,23 @@ def box_detail(request, pk):
         return Response(serializer.data)
         
     elif request.method in ['PUT', 'PATCH']:
-        if not hasattr(request.user, 'profile') or request.user.profile.role != 'admin':
-            return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+        is_admin = hasattr(request.user, 'profile') and request.user.profile.role == 'admin'
+
+        if not is_admin:
+            # Collectors may only update mapLink on boxes assigned to them
+            allowed_fields = set(request.data.keys())
+            if allowed_fields - {'mapLink'}:
+                return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+            is_assigned = Assignment.objects.filter(
+                box=box, collector=request.user
+            ).exists()
+            if not is_assigned:
+                return Response({'error': 'You are not assigned to this box'}, status=status.HTTP_403_FORBIDDEN)
+            box.map_link = request.data.get('mapLink', box.map_link)
+            box.save()
+            serializer = BoxSerializer(box)
+            _notify_sync()
+            return Response(serializer.data)
 
         if 'assignedCollectorId' in request.data:
             collector_id = request.data.get('assignedCollectorId')
